@@ -1,48 +1,104 @@
-const canvas = document.getElementById('musicCanvas');
-const ctx = canvas.getContext('2d');
-const audio = document.getElementById('music');
+const canvas = document.getElementById("musicCanvas");
+const ctx = canvas.getContext("2d");
+const audio = document.getElementById("music");
+const dotPlay = document.getElementById("dotPlay");
 
-audio.addEventListener('play', () => {
-    // Crear contexto de audio y analizador
+let isPlaying = false;
+
+const playMusic = () => {
+    if (!isPlaying) {
+        isPlaying = true;
+        console.log("now playing");
+        audio.play(); // Start playing the audio
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const analyser = audioCtx.createAnalyser();
-
-    // Conectar la fuente de audio al contexto de audio
+  
     const source = audioCtx.createMediaElementSource(audio);
     source.connect(analyser);
     analyser.connect(audioCtx.destination);
-
-    // Configurar el analizador
-    analyser.fftSize = 256;  // Tamaño del análisis FFT
-    const bufferLength = analyser.frequencyBinCount;  // Número de datos de frecuencia
-    const dataArray = new Uint8Array(bufferLength);  // Array para almacenar los datos
-
-    // Función para dibujar las barras
-    function draw() {
-        requestAnimationFrame(draw);
-
-        analyser.getByteFrequencyData(dataArray);  // Obtener los datos de frecuencia
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);  // Limpiar el canvas
-
-        const barWidth = (canvas.width / bufferLength) * 2.5;
-        let barHeight;
-        let x = 0;
-
-        for (let i = 0; i < bufferLength; i++) {
-            barHeight = dataArray[i];
-
-            // Cambiar el color de las barras según la frecuencia
-            const red = barHeight + 25 * (i / bufferLength);
-            const green = 250 * (i / bufferLength);
-            const blue = 50;
-
-            ctx.fillStyle = `rgb(${red},${green},${blue})`;
-            ctx.fillRect(x, canvas.height - barHeight / 2, barWidth, barHeight / 2);
-
-            x += barWidth + 1;
-        }
+  
+    analyser.fftSize = 256;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+  
+    // Array para almacenar tamaños anteriores de las esferas
+    const previousSizes = new Array(bufferLength).fill(0);
+  
+    function randomValue(min, max) {
+      return min + Math.floor(Math.random() * (max - min));
     }
+  
+    const magikColor = () => {
+      let h = randomValue(0, 360);
+      let s = randomValue(25, 100);
+      let l = randomValue(15, 75);
+      return `hsl(${h},${s}%,${l}%)`;
+    };
+  
+    function draw() {
+      requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+      let x = 0;
+      const spacing = canvas.width / 11; // Espaciamiento entre esferas
+  
+      for (let i = 0; i < bufferLength; i++) {
+        const value = dataArray[i];
+  
+        // Establecer un umbral para el valor de frecuencia
+        const threshold = 150; // Ajusta este valor según tus necesidades
+        if (value < threshold) {
+          x += spacing; // Solo mover 'x' si no se dibuja la esfera
+          continue; // Saltar al siguiente índice si el valor es menor que el umbral
+        }
+  
+        const targetRadius =
+          (value / 255) * randomValue(3, 21) + randomValue(4, 85); // Radio de la esfera
+  
+        // Interpolación para suavizar el tamaño
+        previousSizes[i] += (targetRadius - previousSizes[i]) * 0.1; // Suaviza el cambio
+  
+        const color = magikColor();
+        ctx.fillStyle = color;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = color;
+  
+        ctx.beginPath();
+        const offsetY = Math.sin(i + Date.now() * 0.01) * oscillationVal;
+  
+        ctx.arc(x, canvas.height / 2 + offsetY, previousSizes[i], 0, Math.PI * 2);
+        ctx.fill();
+  
+        x += spacing; // Mover 'x' después de dibujar la esfera
+      }
+    }
+  
+    draw();
+    } else {
+        isPlaying = false;
+        audio.pause(); 
+        console.log("now stopped")
+    }
+    
+};
 
-    draw();  // Iniciar la animación
+// Define canvas width and height according to window object
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+window.addEventListener("resize", function () {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 });
+
+const oscillator = document.getElementById("oscilator");
+let oscillationVal = 10;
+
+oscillator.addEventListener("input", () => {
+    oscillationVal = oscillator.value;
+  console.log(`Oscillator frequency changed to: ${oscillationVal} `);
+});
+
+// Attach the event listener after defining the playMusic function
+dotPlay.addEventListener('click', playMusic);
