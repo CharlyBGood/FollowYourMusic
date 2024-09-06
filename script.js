@@ -10,7 +10,7 @@ const playMusic = () => {
         isPlaying = true;
         console.log("now playing");
         audio.play(); // Start playing the audio
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const audioCtx = new (window.AudioContext)();
     const analyser = audioCtx.createAnalyser();
   
     const source = audioCtx.createMediaElementSource(audio);
@@ -22,7 +22,7 @@ const playMusic = () => {
     const dataArray = new Uint8Array(bufferLength);
   
     // Array para almacenar tamaños anteriores de las esferas
-    const previousSizes = new Array(bufferLength).fill(0);
+    // const previousSizes = new Array(bufferLength).fill(0);
   
     function randomValue(min, max) {
       return min + Math.floor(Math.random() * (max - min));
@@ -39,39 +39,65 @@ const playMusic = () => {
       requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+
+      ctx.beginPath();
+      ctx.lineWidth = oscillationVal;
+      ctx.strokeStyle = magikColor();
+
       let x = 0;
-      const spacing = canvas.width / 11; // Espaciamiento entre esferas
-  
-      for (let i = 0; i < bufferLength; i++) {
+      const spacing = canvas.width / bufferLength;
+
+      for (let i = 0; i < bufferLength - 1; i++) {
         const value = dataArray[i];
-  
-        // Establecer un umbral para el valor de frecuencia
-        const threshold = 150; // Ajusta este valor según tus necesidades
-        if (value < threshold) {
-          x += spacing; // Solo mover 'x' si no se dibuja la esfera
-          continue; // Saltar al siguiente índice si el valor es menor que el umbral
+        const y = canvas.height - (value / 255) * canvas.height;
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          const nextX = x + spacing;
+          const nextY = canvas.height - (dataArray[i + 1] / 255) * canvas.height;
+          ctx.quadraticCurveTo(x, y, nextX, nextY); // Genera una curva suave
         }
-  
-        const targetRadius =
-          (value / 255) * randomValue(3, 21) + randomValue(4, 85); // Radio de la esfera
-  
-        // Interpolación para suavizar el tamaño
-        previousSizes[i] += (targetRadius - previousSizes[i]) * 0.1; // Suaviza el cambio
-  
-        const color = magikColor();
-        ctx.fillStyle = color;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = color;
-  
-        ctx.beginPath();
-        const offsetY = Math.sin(i + Date.now() * 0.01) * oscillationVal;
-  
-        ctx.arc(x, canvas.height / 2 + offsetY, previousSizes[i], 0, Math.PI * 2);
-        ctx.fill();
-  
-        x += spacing; // Mover 'x' después de dibujar la esfera
+        
+        x += spacing;
       }
+
+      ctx.stroke();
+
+      // }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+  
+      // let x = 0;
+      // const spacing = canvas.width / 11; // Espaciamiento entre esferas
+  
+      // for (let i = 0; i < bufferLength; i++) {
+      //   const value = dataArray[i];
+  
+      //   // Establecer un umbral para el valor de frecuencia
+      //   const threshold = 150; // Ajusta este valor según tus necesidades
+      //   if (value < threshold) {
+      //     x += spacing; // Solo mover 'x' si no se dibuja la esfera
+      //     continue; // Saltar al siguiente índice si el valor es menor que el umbral
+      //   }
+
+      //   const targetRadius =
+      //     (value / 255) * randomValue(3, 21) + randomValue(4, 85); // Radio de la esfera
+  
+      //   // Interpolación para suavizar el tamaño
+      //   previousSizes[i] += (targetRadius - previousSizes[i]) * 0.1; // Suaviza el cambio
+  
+      //   const color = magikColor();
+      //   ctx.fillStyle = color;
+      //   ctx.shadowBlur = 72;
+      //   ctx.shadowColor = color;
+  
+      //   ctx.beginPath();
+      //   const offsetY = Math.sin(i + Date.now() * 0.01) * oscillationVal;
+  
+      //   ctx.arc(x, canvas.height / 2 + offsetY, previousSizes[i], 0, Math.PI * 2);        
+      //   ctx.fill();
+  
+      //   x += spacing; // Mover 'x' después de dibujar la esfera
+      // }
     }
   
     draw();
@@ -93,7 +119,7 @@ window.addEventListener("resize", function () {
 });
 
 const oscillator = document.getElementById("oscilator");
-let oscillationVal = 10;
+let oscillationVal = 11;
 
 oscillator.addEventListener("input", () => {
     oscillationVal = oscillator.value;
